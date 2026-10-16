@@ -1,0 +1,8 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+# the dataset is not redistributed here: download it (see README)
+data/*.csv
