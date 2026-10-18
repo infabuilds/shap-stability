@@ -46,3 +46,27 @@ def test_bootstrap_ci_contains_the_mean():
     values = np.random.default_rng(0).normal(10, 1, size=200)
     lo, hi = bootstrap_ci(values, n_boot=300)
     assert lo < values.mean() < hi
+
+
+from shapstab.stability import mean_offdiag_ci, pairwise_matrices, rank_matrix  # noqa: E402
+
+
+def test_rank_matrix_orders_most_important_first():
+    r = rank_matrix(np.array([[0.1, 0.9, 0.5]]))
+    assert r.tolist() == [[3.0, 1.0, 2.0]]
+
+
+def test_pairwise_matrices_identical_and_reversed_runs():
+    base = np.array([5.0, 4.0, 3.0, 2.0, 1.0])
+    S, J = pairwise_matrices(np.vstack([base, base, base[::-1]]), k=2)
+    assert S[0, 1] == pytest.approx(1.0) and S[0, 2] == pytest.approx(-1.0)
+    assert J[0, 1] == pytest.approx(1.0) and J[0, 2] == pytest.approx(0.0)
+
+
+def test_mean_offdiag_ci_ignores_self_pairs_and_brackets_mean():
+    rng = np.random.default_rng(0)
+    imp = rng.random((20, 6))
+    S, _ = pairwise_matrices(imp)
+    mean, lo, hi = mean_offdiag_ci(S, n_boot=200)
+    assert lo <= mean <= hi
+    assert hi < 1.0  # would be pulled towards 1 if identical-run pairs were counted

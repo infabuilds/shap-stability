@@ -35,11 +35,12 @@ def make_classifier(name: str, seed: int):
 def encoded_groups(preprocessor: ColumnTransformer) -> tuple[list[str], list[str]]:
     """Names of the encoded columns and, for each, the original feature it came from."""
     names = preprocessor.get_feature_names_out().tolist()
+    cats = sorted(preprocessor.transformers_[1][2], key=len, reverse=True)  # longest name first
     groups = []
     for n in names:
         _, rest = n.split("__", 1)
         if n.startswith("cat__"):
-            for orig in preprocessor.transformers_[1][2]:
+            for orig in cats:
                 if rest == orig or rest.startswith(orig + "_"):
                     groups.append(orig)
                     break

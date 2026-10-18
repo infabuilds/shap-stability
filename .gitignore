@@ -6,3 +6,4 @@ __pycache__/
 .DS_Store
 # the dataset is not redistributed here: download it (see README)
 data/*.csv
+data/openml/

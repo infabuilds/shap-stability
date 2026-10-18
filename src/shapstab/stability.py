@@ -58,6 +58,42 @@ def pairwise_stability(importances: np.ndarray, k: int = 5) -> dict[str, float]:
     }
 
 
+def rank_matrix(importances: np.ndarray) -> np.ndarray:
+    """Per-run feature ranks (1 = most important; ties get the average rank)."""
+    from scipy.stats import rankdata
+
+    return np.vstack([rankdata(-row, method="average") for row in importances])
+
+
+def pairwise_matrices(importances: np.ndarray, k: int = 5) -> tuple[np.ndarray, np.ndarray]:
+    """(runs x runs) matrices of Spearman correlation and top-k Jaccard overlap."""
+    ranks = rank_matrix(importances)
+    spearman = np.corrcoef(ranks)  # Pearson on ranks == Spearman
+    tops = [top_k(row, min(k, importances.shape[1])) for row in importances]
+    jac = np.array([[jaccard(a, b) for b in tops] for a in tops])
+    return spearman, jac
+
+
+def mean_offdiag_ci(matrix: np.ndarray, n_boot: int = 1000, alpha: float = 0.05, seed: int = 0):
+    """Mean of the off-diagonal pairs of a symmetric run-by-run matrix, with a bootstrap CI.
+
+    The bootstrap resamples *runs* (not pairs) with replacement and drops pairs that consist
+    of the same original run twice, so pairs are not artificially perfect.
+    """
+    n = len(matrix)
+    iu = np.triu_indices(n, 1)
+    mean = float(np.nanmean(matrix[iu]))
+    rng = np.random.default_rng(seed)
+    vals = []
+    for _ in range(n_boot):
+        idx = rng.integers(0, n, size=n)
+        sub = matrix[np.ix_(idx, idx)]
+        keep = np.triu(idx[:, None] != idx[None, :], 1)
+        if keep.any():
+            vals.append(np.nanmean(sub[keep]))
+    return mean, float(np.quantile(vals, alpha / 2)), float(np.quantile(vals, 1 - alpha / 2))
+
+
 def bootstrap_ci(values: np.ndarray, n_boot: int = 1000, alpha: float = 0.05, seed: int = 0) -> tuple[float, float]:
     """Percentile bootstrap confidence interval for the mean of ``values``."""
     rng = np.random.default_rng(seed)
